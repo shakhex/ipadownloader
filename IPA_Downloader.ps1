@@ -1369,8 +1369,6 @@ function Check-Update {
 		$Choice = Show-Interactive-Menu -Title "Обновить?" -Options $UpdateOptions
 
 		if ($Choice -ne '1') {
-			# Сохраняем хеш чтобы не спрашивать снова:
-			Set-Content -Path $LastCommitFile -Value $RemoteSha -Force
 			return
 		}
 

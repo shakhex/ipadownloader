@@ -1658,8 +1658,6 @@ except:
     choice=$(show_interactive_menu "Обновить?" "" "$(t UpdateMenu1)" "$(t UpdateMenu2)")
 
     if [[ "$choice" != "1" ]]; then
-        # Сохраняем хеш чтобы не спрашивать снова:
-        echo "$remote_sha" > "$LAST_COMMIT_FILE"
         return
     fi
 
