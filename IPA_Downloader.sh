@@ -860,7 +860,7 @@ read_key() {
                 echo "ESC"
             fi
             ;;
-        '') echo "ENTER" ;;
+        ''|$'\n'|$'\r') echo "ENTER" ;;
         ' ') echo "SPACE" ;;
         *) echo "$key" ;;
     esac
