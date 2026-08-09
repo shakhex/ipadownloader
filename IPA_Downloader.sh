@@ -1608,14 +1608,14 @@ check_update() {
 
     # Извлекаем хеш последнего коммита:
     local remote_sha
-    remote_sha=$(python3 -c "
+    remote_sha=$(echo "$commit_json" | python3 -c "
 import json, sys
 try:
-    data = json.loads(sys.argv[1])
+    data = json.load(sys.stdin)
     print(data.get('sha', ''))
 except:
     print('')
-" "$commit_json" 2>/dev/null)
+" 2>/dev/null)
 
     if [[ -z "$remote_sha" ]]; then
         return
@@ -1634,16 +1634,16 @@ except:
 
     # Получаем список изменённых файлов:
     local changed_files
-    changed_files=$(python3 -c "
+    changed_files=$(echo "$commit_json" | python3 -c "
 import json, sys
 try:
-    data = json.loads(sys.argv[1])
+    data = json.load(sys.stdin)
     files = data.get('files', [])
     for f in files:
         print(f.get('filename', ''))
 except:
     pass
-" "$commit_json" 2>/dev/null)
+" 2>/dev/null)
 
     if [[ -z "$changed_files" ]]; then
         return
@@ -1697,7 +1697,8 @@ except:
     done
 
     # Сохраняем новый хеш:
-    echo "$remote_sha" > "$LAST_COMMIT_FILE"
+    mkdir -p "$(dirname "$LAST_COMMIT_FILE")" 2>/dev/null
+    echo "$remote_sha" > "$LAST_COMMIT_FILE" 2>/dev/null
 
     echo ""
     echo "[OK] Обновлено файлов: $count"
