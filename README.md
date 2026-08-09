@@ -1,4 +1,4 @@
-# IPA Downloader
+# IPA Downloader (shakhex edit)
 
 Инструмент для загрузки и установки IPA-файлов из App Store через Apple ID. Поддерживает **Windows** и **macOS**.
 
