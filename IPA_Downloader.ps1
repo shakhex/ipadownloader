@@ -1326,7 +1326,8 @@ function Invoke-InstallApps {
 function Check-Update {
 	try {
 		# Скачиваем последнюю версию скрипта:
-		$RemoteScript = Invoke-RestMethod -Uri $SelfUpdateUrl -UseBasicParsing -ErrorAction SilentlyContinue
+		$Response = Invoke-WebRequest -Uri $SelfUpdateUrl -UseBasicParsing -ErrorAction SilentlyContinue
+		$RemoteScript = if ($Response) { $Response.Content } else { $null }
 
 		if ([string]::IsNullOrWhiteSpace($RemoteScript)) { return }
 
@@ -1356,15 +1357,15 @@ function Check-Update {
 					$SelfPath = Join-Path -Path $PSScriptRoot -ChildPath "IPA_Downloader.ps1"
 				}
 
-				Invoke-RestMethod -Uri $SelfUpdateUrl -OutFile $SelfPath -ErrorAction Stop
+				Invoke-WebRequest -Uri $SelfUpdateUrl -OutFile $SelfPath -ErrorAction Stop
 
 				# Обновляем macOS-скрипт:
 				$ShPath = Join-Path -Path $PSScriptRoot -ChildPath "IPA_Downloader.sh"
-				Invoke-RestMethod -Uri $SelfUpdateShUrl -OutFile $ShPath -ErrorAction SilentlyContinue
+				Invoke-WebRequest -Uri $SelfUpdateShUrl -OutFile $ShPath -ErrorAction SilentlyContinue
 
 				# Обновляем .command файл:
 				$CommandPath = Join-Path -Path $PSScriptRoot -ChildPath "Start_IPA_Downloader.command"
-				Invoke-RestMethod -Uri $SelfUpdateCommandUrl -OutFile $CommandPath -ErrorAction SilentlyContinue
+				Invoke-WebRequest -Uri $SelfUpdateCommandUrl -OutFile $CommandPath -ErrorAction SilentlyContinue
 
 				Write-Host "[OK] Обновление установлено." -ForegroundColor Green
 				Write-Host "Перезапуск..." -ForegroundColor Cyan
