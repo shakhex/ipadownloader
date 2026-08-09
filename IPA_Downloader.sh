@@ -874,6 +874,8 @@ read_key() {
 
 # Глобальная переменная для заголовка:
 MENU_HEADER=""
+# Глобальная переменная для результата меню:
+MENU_RESULT=""
 
 show_interactive_menu() {
     local title="$1"
@@ -926,12 +928,12 @@ show_interactive_menu() {
                 fi
                 ;;
             ENTER)
-                echo "$cursor"
+                MENU_RESULT="$cursor"
                 return
                 ;;
             ESC)
                 if [[ "$allow_cancel" == "cancel" ]]; then
-                    echo "0"
+                    MENU_RESULT="0"
                     return
                 fi
                 ;;
@@ -1386,7 +1388,8 @@ get_apps_from_list() {
     fi
 
     local choice
-    choice=$(show_interactive_menu "$(t ListMenuTitle)" "cancel" "$menu1" "$menu2" "$menu3")
+    show_interactive_menu "$(t ListMenuTitle)" "cancel" "$menu1" "$menu2" "$menu3"
+    choice="$MENU_RESULT"
 
     if [[ "$choice" == "0" ]]; then
         return
@@ -1655,7 +1658,8 @@ except:
     done
     echo ""
     local choice
-    choice=$(show_interactive_menu "Обновить?" "" "$(t UpdateMenu1)" "$(t UpdateMenu2)")
+    show_interactive_menu "Обновить?" "" "$(t UpdateMenu1)" "$(t UpdateMenu2)"
+    choice="$MENU_RESULT"
 
     if [[ "$choice" != "1" ]]; then
         return
@@ -1731,7 +1735,8 @@ setup_wizard() {
     # Выбор языка:
     separator
     local lang_choice
-    lang_choice=$(show_interactive_menu "$(t LanguageMenuTitle)" "" "$(t LanguageMenu1)" "$(t LanguageMenu2)")
+    show_interactive_menu "$(t LanguageMenuTitle)" "" "$(t LanguageMenu1)" "$(t LanguageMenu2)"
+    lang_choice="$MENU_RESULT"
     if [[ "$lang_choice" == "1" ]]; then
         CURRENT_LANG="RU"
     else
@@ -1748,7 +1753,8 @@ setup_wizard() {
     # Выбор режима:
     separator
     local mode_choice
-    mode_choice=$(show_interactive_menu "$(t ModeMenuTitle)" "" "$(t ModeMenu1)" "$(t ModeMenu2)")
+    show_interactive_menu "$(t ModeMenuTitle)" "" "$(t ModeMenu1)" "$(t ModeMenu2)"
+    mode_choice="$MENU_RESULT"
     if [[ "$mode_choice" == "2" ]]; then
         WORK_MODE="Installer"
     else
@@ -1774,7 +1780,8 @@ invoke_ipatool_version_prompt() {
     while true; do
         separator
         local choice
-        choice=$(show_interactive_menu "$(t IpatoolVersionMenuTitle)" "" "$v2_label" "$v3_label")
+        show_interactive_menu "$(t IpatoolVersionMenuTitle)" "" "$v2_label" "$v3_label"
+        choice="$MENU_RESULT"
         local selected_ver
         if [[ "$choice" == "2" ]]; then
             selected_ver="v3"
@@ -1891,7 +1898,8 @@ print('yes' if isinstance(d, dict) and len(d) > 0 else 'no')
 
     separator
     local acc_choice
-    acc_choice=$(show_interactive_menu "$(t ClearAccountMenuTitle)" "cancel" "${acc_options[@]}")
+    show_interactive_menu "$(t ClearAccountMenuTitle)" "cancel" "${acc_options[@]}"
+    acc_choice="$MENU_RESULT"
 
     if [[ "$acc_choice" == "0" ]]; then
         return
@@ -1955,7 +1963,8 @@ invoke_downloader_mode() {
         done
 
         local choice
-        choice=$(show_interactive_menu "$(t MenuTitle)" "" "${menu_options[@]}")
+        show_interactive_menu "$(t MenuTitle)" "" "${menu_options[@]}"
+        choice="$MENU_RESULT"
 
         case "$choice" in
             1)
@@ -2108,7 +2117,8 @@ invoke_downloader_mode() {
 clear_data_menu() {
     separator
     local choice
-    choice=$(show_interactive_menu "$(t ClearMenuTitle)" "cancel" "$(t ClearMenu1)" "$(t ClearMenu2)" "$(t ClearMenu3)")
+    show_interactive_menu "$(t ClearMenuTitle)" "cancel" "$(t ClearMenu1)" "$(t ClearMenu2)" "$(t ClearMenu3)"
+    choice="$MENU_RESULT"
 
     case "$choice" in
         1) clear_list_data "$PURCHASED_FILE" "ErrorPurchasedEmpty" "PurchasedListCleared" ;;
@@ -2356,7 +2366,8 @@ invoke_installer_mode() {
             "$(t InstallerMenu6)"
         )
         local choice
-        choice=$(show_interactive_menu "$(t MenuTitle)" "" "${installer_options[@]}")
+        show_interactive_menu "$(t MenuTitle)" "" "${installer_options[@]}"
+        choice="$MENU_RESULT"
 
         case "$choice" in
             1)
