@@ -1325,8 +1325,11 @@ function Invoke-InstallApps {
 # Функция проверки и автоматического обновления:
 function Check-Update {
 	try {
+		# Принудительно включаем TLS 1.2 для GitHub:
+		[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+
 		# Скачиваем последнюю версию скрипта:
-		$Response = Invoke-WebRequest -Uri $SelfUpdateUrl -UseBasicParsing -ErrorAction SilentlyContinue
+		$Response = Invoke-WebRequest -Uri $SelfUpdateUrl -UseBasicParsing -ErrorAction SilentlyContinue -TimeoutSec 10
 		$RemoteScript = if ($Response) { $Response.Content } else { $null }
 
 		if ([string]::IsNullOrWhiteSpace($RemoteScript)) { return }
@@ -1380,8 +1383,8 @@ function Check-Update {
 			}
 		}
 	} catch {
-		Separator
-		Write-Host (Get-Lang 'ErrorUpdateCheck') -ForegroundColor DarkRed
+		# Проверка обновлений не критична — молча пропускаем
+		return
 	}
 }
 
@@ -1447,10 +1450,8 @@ foreach ($Dir in @("$AppsFolderPath", "$ListsFolderPath", "$MainAppFolderPath", 
 Get-ChildItem -Path $PSScriptRoot -Filter "*.ipa.tmp" -File -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
 if (Test-Path $AppsIDTempListPath) { Remove-Item $AppsIDTempListPath -Force -ErrorAction SilentlyContinue }
 
-# Проверка на Windows 7 и включение TLS 1.2:
-if ($WindowsVersion.Major -eq 6 -and $WindowsVersion.Minor -eq 1) {
-	[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-}
+# Включение TLS 1.2 для GitHub:
+[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
 
 # Асинхронное фоновое обновление списка приложений с GitHub:
 $AppsIDListDownload = {
