@@ -1,0 +1,2 @@
+# Force BOM preservation for PowerShell scripts
+*.ps1 working-tree-encoding=utf-8-bom
