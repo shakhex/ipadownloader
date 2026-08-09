@@ -8,6 +8,7 @@ Lists/Downloaded_IDs.json
 Lists/Purchased_IDs.json
 MainApp/Apps_ID_List_tmp.txt
 MainApp/.deps_installed
+MainApp/.last_commit
 
 # Настройки (создаются при первом запуске)
 MainApp/Settings.txt

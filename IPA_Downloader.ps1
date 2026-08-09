@@ -11,6 +11,7 @@ $SelfUpdateUrl = "$RawBase/IPA_Downloader.ps1"
 $SelfUpdateShUrl = "$RawBase/IPA_Downloader.sh"
 $SelfUpdateCommandUrl = "$RawBase/Start_IPA_Downloader.command"
 $AppsListUrl = "$RawBase/Lists/Apps_ID_List.txt"
+$CommitApiUrl = "https://api.github.com/repos/shakhex/ipadownloader/commits/main"
 
 # Определение запуска на Windows:
 $IsWin = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)
@@ -1328,60 +1329,89 @@ function Check-Update {
 		# Принудительно включаем TLS 1.2 для GitHub:
 		[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
 
-		# Скачиваем последнюю версию скрипта:
-		$Response = Invoke-WebRequest -Uri $SelfUpdateUrl -UseBasicParsing -ErrorAction SilentlyContinue -TimeoutSec 10
-		$RemoteScript = if ($Response) { $Response.Content } else { $null }
+		# Получаем информацию о последнем коммите:
+		$CommitResponse = Invoke-WebRequest -Uri $CommitApiUrl -UseBasicParsing -ErrorAction SilentlyContinue -TimeoutSec 10
+		if (-not $CommitResponse) { return }
 
-		if ([string]::IsNullOrWhiteSpace($RemoteScript)) { return }
+		$CommitData = $CommitResponse.Content | ConvertFrom-Json -ErrorAction SilentlyContinue
+		if (-not $CommitData -or -not $CommitData.sha) { return }
 
-		# Извлекаем версию из удалённого скрипта:
-		$RemoteVersionMatch = [regex]::Match($RemoteScript, '\$ScriptVersion\s*=\s*"([^"]+)"')
-		if (-not $RemoteVersionMatch.Success) { return }
+		$RemoteSha = $CommitData.sha
 
-		$RemoteVersionFull = $RemoteVersionMatch.Groups[1].Value
-		$RemoteVerStr = [regex]::Match($RemoteVersionFull, '\d+(\.\d+)+').Value
-		$CurrentVerStr = [regex]::Match($ScriptVersion, '\d+(\.\d+)+').Value
-
-		if ([string]::IsNullOrEmpty($RemoteVerStr) -or [string]::IsNullOrEmpty($CurrentVerStr)) { return }
-
-		if ([version]$RemoteVerStr -gt [version]$CurrentVerStr) {
-			Separator
-			$UpdateTitle = (Get-Lang 'UpdateAvailableTitle') -f $RemoteVersionFull
-			$UpdateOptions = @((Get-Lang 'UpdateMenu1'), (Get-Lang 'UpdateMenu2'))
-			$Choice = Show-Interactive-Menu -Title $UpdateTitle -Options $UpdateOptions
-
-			if ($Choice -eq '1') {
-				Separator
-				Write-Host "Обновление до версии $RemoteVersionFull..." -ForegroundColor Cyan
-
-				# Скачиваем и заменяем текущий скрипт:
-				$SelfPath = $MyInvocation.ScriptName
-				if ([string]::IsNullOrEmpty($SelfPath)) {
-					$SelfPath = Join-Path -Path $PSScriptRoot -ChildPath "IPA_Downloader.ps1"
-				}
-
-				Invoke-WebRequest -Uri $SelfUpdateUrl -OutFile $SelfPath -ErrorAction Stop
-
-				# Обновляем macOS-скрипт:
-				$ShPath = Join-Path -Path $PSScriptRoot -ChildPath "IPA_Downloader.sh"
-				Invoke-WebRequest -Uri $SelfUpdateShUrl -OutFile $ShPath -ErrorAction SilentlyContinue
-
-				# Обновляем .command файл:
-				$CommandPath = Join-Path -Path $PSScriptRoot -ChildPath "Start_IPA_Downloader.command"
-				Invoke-WebRequest -Uri $SelfUpdateCommandUrl -OutFile $CommandPath -ErrorAction SilentlyContinue
-
-				Write-Host "[OK] Обновление установлено." -ForegroundColor Green
-				Write-Host "Перезапуск..." -ForegroundColor Cyan
-
-				# Перезапуск скрипта:
-				$pwshPath = (Get-Command pwsh -ErrorAction SilentlyContinue).Source
-				if (-not $pwshPath) { $pwshPath = (Get-Command powershell -ErrorAction SilentlyContinue).Source }
-				if ($pwshPath) {
-					Start-Process $pwshPath -ArgumentList "-ExecutionPolicy Bypass -File `"$SelfPath`"" -WorkingDirectory $PSScriptRoot
-				}
-				exit
-			}
+		# Читаем сохранённый хеш:
+		$LastCommitFile = Join-Path -Path $MainAppFolderPath -ChildPath ".last_commit"
+		$LocalSha = ""
+		if (Test-Path $LastCommitFile) {
+			$LocalSha = (Get-Content $LastCommitFile -Raw -ErrorAction SilentlyContinue).Trim()
 		}
+
+		# Если хеши совпадают — обновление не нужно:
+		if ($LocalSha -eq $RemoteSha) { return }
+
+		# Получаем список изменённых файлов:
+		$ChangedFiles = @()
+		if ($CommitData.files) {
+			$ChangedFiles = $CommitData.files | ForEach-Object { $_.filename }
+		}
+
+		if ($ChangedFiles.Count -eq 0) { return }
+
+		# Показываем что обновляется:
+		Separator
+		Write-Host "Доступно обновление!" -ForegroundColor Cyan
+		Write-Host "Изменённые файлы:"
+		foreach ($f in $ChangedFiles) {
+			Write-Host "  - $f"
+		}
+		Write-Host ""
+
+		$UpdateOptions = @((Get-Lang 'UpdateMenu1'), (Get-Lang 'UpdateMenu2'))
+		$Choice = Show-Interactive-Menu -Title "Обновить?" -Options $UpdateOptions
+
+		if ($Choice -ne '1') {
+			# Сохраняем хеш чтобы не спрашивать снова:
+			Set-Content -Path $LastCommitFile -Value $RemoteSha -Force
+			return
+		}
+
+		Separator
+		Write-Host "Загрузка обновлений..." -ForegroundColor Cyan
+
+		# Скачиваем каждый изменённый файл:
+		$Count = 0
+		foreach ($File in $ChangedFiles) {
+			if ([string]::IsNullOrWhiteSpace($File)) { continue }
+
+			$FileUrl = "$RawBase/$File"
+			$LocalPath = Join-Path -Path $PSScriptRoot -ChildPath $File
+			$LocalDir = Split-Path -Path $LocalPath -Parent
+
+			# Создаём директорию если нужно:
+			if (-not (Test-Path $LocalDir)) {
+				$null = New-Item -Path $LocalDir -ItemType Directory -Force
+			}
+
+			# Скачиваем файл:
+			Write-Host "  $File"
+			Invoke-WebRequest -Uri $FileUrl -OutFile $LocalPath -ErrorAction SilentlyContinue
+			$Count++
+		}
+
+		# Сохраняем новый хеш:
+		Set-Content -Path $LastCommitFile -Value $RemoteSha -Force
+
+		Write-Host ""
+		Write-Host "[OK] Обновлено файлов: $Count" -ForegroundColor Green
+		Write-Host "Перезапуск..." -ForegroundColor Cyan
+
+		# Перезапуск скрипта:
+		$SelfPath = Join-Path -Path $PSScriptRoot -ChildPath "IPA_Downloader.ps1"
+		$pwshPath = (Get-Command pwsh -ErrorAction SilentlyContinue).Source
+		if (-not $pwshPath) { $pwshPath = (Get-Command powershell -ErrorAction SilentlyContinue).Source }
+		if ($pwshPath) {
+			Start-Process $pwshPath -ArgumentList "-ExecutionPolicy Bypass -File `"$SelfPath`"" -WorkingDirectory $PSScriptRoot
+		}
+		exit
 	} catch {
 		# Проверка обновлений не критична — молча пропускаем
 		return

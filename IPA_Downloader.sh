@@ -17,6 +17,8 @@ RAW_BASE="https://raw.githubusercontent.com/shakhex/ipadownloader/main"
 SELF_UPDATE_URL="$RAW_BASE/IPA_Downloader.sh"
 SELF_UPDATE_PS_URL="$RAW_BASE/IPA_Downloader.ps1"
 SELF_UPDATE_COMMAND_URL="$RAW_BASE/Start_IPA_Downloader.command"
+LAST_COMMIT_FILE="$MAINAPP_DIR/.last_commit"
+COMMIT_API_URL="https://api.github.com/repos/shakhex/ipadownloader/commits/main"
 
 MAINAPP_DIR="./MainApp"
 SETTINGS_FILE="$MAINAPP_DIR/Settings.txt"
@@ -1593,96 +1595,115 @@ invoke_install_apps() {
 UPDATE_CHECKED=0
 
 check_update() {
-    # Получаем последнюю версию скрипта с GitHub:
-    local remote_script
-    remote_script=$(curl -sL "$SELF_UPDATE_URL" 2>/dev/null)
+    # Получаем информацию о последнем коммите:
+    local commit_json
+    commit_json=$(curl -sL "$COMMIT_API_URL" -H "Accept: application/vnd.github.v3+json" 2>/dev/null)
 
-    if [[ -z "$remote_script" || ${#remote_script} -lt 100 ]]; then
+    if [[ -z "$commit_json" || ${#commit_json} -lt 50 ]]; then
         return
     fi
 
-    # Извлекаем версию из удалённого скрипта:
-    local remote_version
-    remote_version=$(echo "$remote_script" | grep -m1 '^SCRIPT_VERSION=' | sed 's/SCRIPT_VERSION="//;s/"//')
+    # Извлекаем хеш последнего коммита:
+    local remote_sha
+    remote_sha=$(python3 -c "
+import json, sys
+try:
+    data = json.loads(sys.argv[1])
+    print(data.get('sha', ''))
+except:
+    print('')
+" "$commit_json" 2>/dev/null)
 
-    if [[ -z "$remote_version" ]]; then
+    if [[ -z "$remote_sha" ]]; then
         return
     fi
 
-    local remote_ver
-    remote_ver=$(echo "$remote_version" | grep -oE '[0-9]+(\.[0-9]+)+' | head -1)
-    local current_ver
-    current_ver=$(echo "$SCRIPT_VERSION" | grep -oE '[0-9]+(\.[0-9]+)+' | head -1)
+    # Читаем сохранённый хеш:
+    local local_sha=""
+    if [[ -f "$LAST_COMMIT_FILE" ]]; then
+        local_sha=$(cat "$LAST_COMMIT_FILE" 2>/dev/null | tr -d '[:space:]')
+    fi
 
-    if [[ -z "$remote_ver" || -z "$current_ver" ]]; then
+    # Если хеши совпадают — обновление не нужно:
+    if [[ "$local_sha" == "$remote_sha" ]]; then
         return
     fi
 
-    # Сравнение версий:
-    local newer=0
-    local -a rv=(${(s:.:)remote_ver})
-    local -a cv=(${(s:.:)current_ver})
-    local j
-    for ((j=0; j<${#rv[@]}; j++)); do
-        local r=${rv[$j]:-0}
-        local c=${cv[$j]:-0}
-        if [[ $r -gt $c ]]; then
-            newer=1
-            break
-        elif [[ $r -lt $c ]]; then
-            break
-        fi
-    done
+    # Получаем список изменённых файлов:
+    local changed_files
+    changed_files=$(python3 -c "
+import json, sys
+try:
+    data = json.loads(sys.argv[1])
+    files = data.get('files', [])
+    for f in files:
+        print(f.get('filename', ''))
+except:
+    pass
+" "$commit_json" 2>/dev/null)
 
-    if [[ $newer -eq 0 ]]; then
+    if [[ -z "$changed_files" ]]; then
         return
     fi
 
+    # Показываем что обновляется:
     separator
-    local update_title
-    update_title=$(printf "$(t UpdateAvailableTitle)" "$remote_version")
+    echo "Доступно обновление!"
+    echo "Изменённые файлы:"
+    echo "$changed_files" | while IFS= read -r f; do
+        [[ -n "$f" ]] && echo "  - $f"
+    done
+    echo ""
     local choice
-    choice=$(show_interactive_menu "$update_title" "" "$(t UpdateMenu1)" "$(t UpdateMenu2)")
+    choice=$(show_interactive_menu "Обновить?" "" "$(t UpdateMenu1)" "$(t UpdateMenu2)")
 
     if [[ "$choice" != "1" ]]; then
+        # Сохраняем хеш чтобы не спрашивать снова:
+        echo "$remote_sha" > "$LAST_COMMIT_FILE"
         return
     fi
 
     separator
-    echo "Обновление до версии $remote_version..."
+    echo "Загрузка обновлений..."
 
-    # Скачиваем новый скрипт во временный файл:
-    local tmp_file="/tmp/ipadownloader_update_$$.sh"
-    curl -sL "$SELF_UPDATE_URL" -o "$tmp_file" 2>/dev/null
+    # Скачиваем каждый изменённый файл:
+    local base_dir
+    base_dir=$(cd "$(dirname "$0")" && pwd)
+    local count=0
 
-    if [[ ! -f "$tmp_file" ]] || [[ $(wc -c < "$tmp_file") -lt 100 ]]; then
-        echo "Ошибка загрузки обновления."
-        rm -f "$tmp_file"
-        press_any_key
-        return
-    fi
+    echo "$changed_files" | while IFS= read -r file; do
+        [[ -z "$file" ]] && continue
 
-    # Заменяем текущий скрипт:
-    local self_path
-    self_path=$(cd "$(dirname "$0")" && pwd)/$(basename "$0")
-    cp "$tmp_file" "$self_path"
-    chmod +x "$self_path"
-    rm -f "$tmp_file"
+        local file_url="$RAW_BASE/$file"
+        local local_path="$base_dir/$file"
+        local local_dir
+        local_dir=$(dirname "$local_path")
 
-    # Обновляем .command файл:
-    local command_path
-    command_path=$(cd "$(dirname "$0")" && pwd)/Start_IPA_Downloader.command
-    curl -sL "$SELF_UPDATE_COMMAND_URL" -o "$command_path" 2>/dev/null
-    chmod +x "$command_path" 2>/dev/null
+        # Создаём директорию если нужно:
+        mkdir -p "$local_dir" 2>/dev/null
 
-    # Обновляем Windows скрипты (если есть):
-    local ps1_path
-    ps1_path=$(cd "$(dirname "$0")" && pwd)/IPA_Downloader.ps1
-    curl -sL "$SELF_UPDATE_PS_URL" -o "$ps1_path" 2>/dev/null
+        # Скачиваем файл:
+        echo "  $file"
+        curl -sL "$file_url" -o "$local_path" 2>/dev/null
 
-    echo "[OK] Обновление установлено."
+        # Делаем исполняемым если нужно:
+        if [[ "$file" == *.sh || "$file" == *.command ]]; then
+            chmod +x "$local_path" 2>/dev/null
+        fi
+
+        ((count++))
+    done
+
+    # Сохраняем новый хеш:
+    echo "$remote_sha" > "$LAST_COMMIT_FILE"
+
+    echo ""
+    echo "[OK] Обновлено файлов: $count"
     echo "Перезапуск..."
     echo ""
+
+    # Перезапускаем скрипт:
+    local self_path="$base_dir/$(basename "$0")"
     exec zsh "$self_path"
 }
 
