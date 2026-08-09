@@ -879,7 +879,7 @@ show_interactive_menu() {
     shift 2
     local options=("$@")
 
-    local cursor=0
+    local cursor=1
     local count=${#options[@]}
 
     redraw_menu() {
@@ -890,7 +890,7 @@ show_interactive_menu() {
         echo "$title" > /dev/tty
         echo "" > /dev/tty
         local i
-        for ((i=0; i<count; i++)); do
+        for ((i=1; i<=count; i++)); do
             if [[ $i -eq $cursor ]]; then
                 printf '\033[7m > %s\033[0m\n' "${options[$i]}" > /dev/tty
             else
@@ -912,19 +912,19 @@ show_interactive_menu() {
         key=$(read_key)
         case "$key" in
             UP)
-                if [[ $cursor -gt 0 ]]; then
+                if [[ $cursor -gt 1 ]]; then
                     ((cursor--))
                     redraw_menu
                 fi
                 ;;
             DOWN)
-                if [[ $cursor -lt $((count-1)) ]]; then
+                if [[ $cursor -lt $count ]]; then
                     ((cursor++))
                     redraw_menu
                 fi
                 ;;
             ENTER)
-                echo $((cursor+1))
+                echo "$cursor"
                 return
                 ;;
             ESC)
@@ -966,13 +966,13 @@ show_paginated_selection() {
 
     local total_pages=$(( (total + page_size - 1) / page_size ))
     local current_page=1
-    local cursor=0
+    local cursor=1
     local -A selected_map=()
 
     redraw_page() {
         printf '\033[2J\033[H' > /dev/tty
-        local start_idx=$(( (current_page - 1) * page_size ))
-        local end_idx=$(( start_idx + page_size ))
+        local start_idx=$(( (current_page - 1) * page_size + 1 ))
+        local end_idx=$(( current_page * page_size ))
         if [[ $end_idx -gt $total ]]; then
             end_idx=$total
         fi
@@ -982,13 +982,12 @@ show_paginated_selection() {
         echo "" > /dev/tty
 
         local i
-        for ((i=start_idx; i<end_idx; i++)); do
-            local num=$((i+1))
-            local rel=$((i - start_idx))
+        local rel=1
+        for ((i=start_idx; i<=end_idx; i++)); do
             local mark="   "
             local prefix="   "
 
-            if [[ -n "${selected_map[$num]+x}" ]]; then
+            if [[ -n "${selected_map[$i]+x}" ]]; then
                 mark="[x]"
             else
                 mark="[ ]"
@@ -997,11 +996,12 @@ show_paginated_selection() {
             if [[ $rel -eq $cursor ]]; then
                 prefix=" > "
                 printf '\033[30;47m%s%s %s (ID: %s)\033[0m\n' "$prefix" "$mark" "${item_names[$i]}" "${item_ids[$i]}" > /dev/tty
-            elif [[ -n "${selected_map[$num]+x}" ]]; then
+            elif [[ -n "${selected_map[$i]+x}" ]]; then
                 printf '\033[32m%s%s %s (ID: %s)\033[0m\n' "$prefix" "$mark" "${item_names[$i]}" "${item_ids[$i]}" > /dev/tty
             else
                 echo "${prefix}${mark} ${item_names[$i]} (ID: ${item_ids[$i]})" > /dev/tty
             fi
+            ((rel++))
         done
 
         echo "" > /dev/tty
@@ -1017,22 +1017,20 @@ show_paginated_selection() {
         local key
         key=$(read_key)
         local need_redraw=0
-        local max_in_page=$(( end_idx - start_idx ))
-        # Recalculate:
-        local s_idx=$(( (current_page - 1) * page_size ))
-        local e_idx=$(( s_idx + page_size ))
+        local s_idx=$(( (current_page - 1) * page_size + 1 ))
+        local e_idx=$(( current_page * page_size ))
         if [[ $e_idx -gt $total ]]; then e_idx=$total; fi
-        local max_rel=$(( e_idx - s_idx - 1 ))
+        local max_in_page=$(( e_idx - s_idx + 1 ))
 
         case "$key" in
             UP)
-                if [[ $cursor -gt 0 ]]; then
+                if [[ $cursor -gt 1 ]]; then
                     ((cursor--))
                     need_redraw=1
                 fi
                 ;;
             DOWN)
-                if [[ $cursor -lt $max_rel ]]; then
+                if [[ $cursor -lt $max_in_page ]]; then
                     ((cursor++))
                     need_redraw=1
                 fi
@@ -1040,19 +1038,19 @@ show_paginated_selection() {
             LEFT)
                 if [[ $current_page -gt 1 ]]; then
                     ((current_page--))
-                    cursor=0
+                    cursor=1
                     need_redraw=1
                 fi
                 ;;
             RIGHT)
                 if [[ $current_page -lt $total_pages ]]; then
                     ((current_page++))
-                    cursor=0
+                    cursor=1
                     need_redraw=1
                 fi
                 ;;
             SPACE)
-                local gi=$(( (current_page - 1) * page_size + cursor + 1 ))
+                local gi=$(( (current_page - 1) * page_size + cursor ))
                 if [[ -n "${selected_map[$gi]+x}" ]]; then
                     unset "selected_map[$gi]"
                 else
@@ -1081,7 +1079,7 @@ show_paginated_selection() {
             a|A|ф|Ф)
                 # Выбрать страницу:
                 local ii
-                for ((ii=s_idx+1; ii<=e_idx; ii++)); do
+                for ((ii=s_idx; ii<=e_idx; ii++)); do
                     selected_map[$ii]=1
                 done
                 need_redraw=1
@@ -1089,7 +1087,7 @@ show_paginated_selection() {
             d|D|в|В)
                 # Снять страницу:
                 local ii
-                for ((ii=s_idx+1; ii<=e_idx; ii++)); do
+                for ((ii=s_idx; ii<=e_idx; ii++)); do
                     unset "selected_map[$ii]"
                 done
                 need_redraw=1
