@@ -1,0 +1,32 @@
+# IPA файлы (загруженные приложения)
+Apps/*.ipa
+*.ipa
+*.ipa.tmp
+
+# Персональные данные и сессии
+Lists/Downloaded_IDs.json
+Lists/Purchased_IDs.json
+MainApp/Apps_ID_List_tmp.txt
+MainApp/.deps_installed
+
+# Настройки (создаются при первом запуске)
+MainApp/Settings.txt
+
+# Apple ID данные
+.ipatool/
+
+# mimocode
+.mimocode/
+
+# Утилита
+mimo.exe
+
+# macOS
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+Desktop.ini
