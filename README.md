@@ -109,7 +109,6 @@ IPA_Downloader/
 
 Если проект оказался полезным:
 
-- [GitHub Sponsors](https://github.com/sponsors/shakhex)
 - [Telegram](https://t.me/shakhex)
 
 ## Лицензия
