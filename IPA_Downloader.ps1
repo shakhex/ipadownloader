@@ -351,6 +351,7 @@ function Show-Error {
 	param ([string]$Key = "ErrorInvalidInput")
 	Separator
 	Write-Host (Get-Lang $Key) -ForegroundColor DarkRed
+	Read-Host (Get-Lang 'PressEnterToContinue')
 }
 
 # Глобальная переменная для хранения текущего Apple ID:
