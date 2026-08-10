@@ -938,6 +938,44 @@ function Show-Interactive-Menu {
 	}
 }
 
+# Функция перевода ошибок ipatool в понятный текст:
+function Translate-IpaError {
+	param ([string]$Output)
+	if ([string]::IsNullOrWhiteSpace($Output)) { return $null }
+
+	$ErrorMap = @(
+		@{ Pattern = 'Timeout was reached';                         Text = 'Не удалось подключиться к серверам Apple, проверьте интернет-соединение' }
+		@{ Pattern = 'license is required';                         Text = 'Приложение не было приобретено на этом Apple ID ранее' }
+		@{ Pattern = 'Purchase error:\s*app not found';             Text = 'Покупка не удалась — приложение удалено из App Store' }
+		@{ Pattern = 'item is temporarily unavailable';             Text = 'Приложение удалено из App Store, покупка невозможна' }
+		@{ Pattern = 'No device found';                             Text = 'Устройство не найдено. Убедитесь, что драйвер Apple Mobile Device Support установлен' }
+		@{ Pattern = 'could not locate Payload.*SC_Info.*\.sinf';   Text = 'В IPA-файле не найдена подпись приложения' }
+		@{ Pattern = 'anisette.*iTunes Not Found';                  Text = 'Не установлен iTunes с сайта Apple (не Microsoft Store)' }
+		@{ Pattern = 'anisette.*iCloud Not Found';                  Text = 'Не установлен iCloud с сайта Apple (не Microsoft Store)' }
+		@{ Pattern = 'GSA SRP exception.*-27952';                   Text = 'Необходимо отключить расширенную защиту данных: Настройки → Аккаунт → iCloud → Расширенная защита данных' }
+		@{ Pattern = 'GSA SRP exception';                           Text = 'Ошибка авторизации Apple ID. Обновите iCloud for Windows до последней версии' }
+		@{ Pattern = 'HTTP request failed';                         Text = 'Не удалось подключиться к серверам Apple, проверьте интернет-соединение' }
+	)
+
+	foreach ($entry in $ErrorMap) {
+		if ($Output -match $entry.Pattern) {
+			return $entry.Text
+		}
+	}
+	return $null
+}
+
+# Функция вывода ошибки ipatool с переводом:
+function Show-IpaError {
+	param ([string]$Output)
+	$Translated = Translate-IpaError -Output $Output
+	if ($Translated) {
+		Write-Host $Translated -ForegroundColor DarkRed
+	} else {
+		Write-Host $Output -ForegroundColor DarkRed
+	}
+}
+
 # Функция загрузки приложений:
 function IPA-Download {
 	param (
@@ -948,8 +986,8 @@ function IPA-Download {
 	Separator
 	try {
 		$dlOutput = & "$ipatoolFilePath" download -i $AppId --purchase 2>&1 | Out-String
-		if ($dlOutput -match "Error:" -or $dlOutput -match "error") {
-			Write-Host $dlOutput -ForegroundColor DarkRed
+		if ($dlOutput -match "Error:" -or $dlOutput -match "error" -or $dlOutput -match "WARNING:") {
+			Show-IpaError -Output $dlOutput
 			Read-Host (Get-Lang 'PressEnterToContinue')
 			return
 		}
@@ -971,8 +1009,9 @@ function IPA-Download-With-Version {
 	Separator
 	$RawOutput = & "$ipatoolFilePath" list-versions -i $AppId 2>&1
 
-	if ($RawOutput -match "Error:") {
-		Write-Host $RawOutput -ForegroundColor DarkRed
+	if ($RawOutput -match "Error:" -or $RawOutput -match "error") {
+		Show-IpaError -Output $RawOutput
+		Read-Host (Get-Lang 'PressEnterToContinue')
 		return
 	}
 
@@ -1019,9 +1058,9 @@ function IPA-Download-With-Version {
 		$FinalId = $SelectedObject.ID
 		try {
 			$dlOutput = & "$ipatoolFilePath" download -i $AppId --external-version-id $FinalId 2>&1 | Out-String
-			if ($dlOutput -match "Error:" -or $dlOutput -match "error") {
-				Write-Host $dlOutput -ForegroundColor DarkYellow
-				Write-Host "Skipping version $($SelectedObject.Version)..." -ForegroundColor DarkYellow
+			if ($dlOutput -match "Error:" -or $dlOutput -match "error" -or $dlOutput -match "WARNING:") {
+				Show-IpaError -Output $dlOutput
+				Write-Host "Пропуск версии $($SelectedObject.Version)..." -ForegroundColor DarkYellow
 				continue
 			}
 			Move-IPA-Files -AppId $AppId -AppName $AppName
@@ -1048,7 +1087,7 @@ function Invoke-AppAction {
 			try {
 				$purchaseOutput = & "$ipatoolFilePath" purchase -i $AppId 2>&1 | Out-String
 				if ($purchaseOutput -match "Error:" -or $purchaseOutput -match "error") {
-					Write-Host $purchaseOutput -ForegroundColor DarkRed
+					Show-IpaError -Output $purchaseOutput
 					Read-Host (Get-Lang 'PressEnterToContinue')
 					return
 				}
