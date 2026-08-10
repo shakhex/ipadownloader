@@ -1388,10 +1388,14 @@ function Check-Update {
 
 		$RemoteSha = $CommitData.sha
 
-		# Читаем сохранённый хеш:
+		# Читаем сохранённый хеш (сначала пробуем git, затем файл):
 		$LastCommitFile = Join-Path -Path $MainAppFolderPath -ChildPath ".last_commit"
 		$LocalSha = ""
-		if (Test-Path $LastCommitFile) {
+		$GitExe = (Get-Command git -ErrorAction SilentlyContinue).Source
+		if ($GitExe -and (Test-Path (Join-Path $PSScriptRoot ".git"))) {
+			$LocalSha = (& $GitExe -C $PSScriptRoot rev-parse HEAD 2>$null).Trim()
+		}
+		if ([string]::IsNullOrWhiteSpace($LocalSha) -and (Test-Path $LastCommitFile)) {
 			$LocalSha = (Get-Content $LastCommitFile -Raw -ErrorAction SilentlyContinue).Trim()
 		}
 
