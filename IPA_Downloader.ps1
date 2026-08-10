@@ -1416,6 +1416,10 @@ function Check-Update {
 		$GitExe = (Get-Command git -ErrorAction SilentlyContinue).Source
 		if ($GitExe -and (Test-Path (Join-Path $PSScriptRoot ".git"))) {
 			$LocalSha = (& $GitExe -C $PSScriptRoot rev-parse HEAD 2>$null).Trim()
+			# Синхронизируем .last_commit с git:
+			if (-not [string]::IsNullOrWhiteSpace($LocalSha)) {
+				Set-Content -Path $LastCommitFile -Value $LocalSha -Force
+			}
 		}
 		if ([string]::IsNullOrWhiteSpace($LocalSha) -and (Test-Path $LastCommitFile)) {
 			$LocalSha = (Get-Content $LastCommitFile -Raw -ErrorAction SilentlyContinue).Trim()
