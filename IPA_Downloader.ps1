@@ -222,6 +222,7 @@ $LangStrings = @{
 		"HelpMenuNavCancel" = "Up/Down: навигация | Enter: выбор | Esc: отмена"
 		"ModeLabelDownloader" = "Загрузчик IPA"
 		"ModeLabelInstaller" = "Установщик IPA"
+		"PressEnterToContinue" = "Нажмите Enter для продолжения..."
 	}
 	"EN" = @{
 		"AccountCleared" = "Done. Account {0} data cleared."
@@ -331,6 +332,7 @@ $LangStrings = @{
 		"HelpMenuNavCancel" = "Up/Down: navigate | Enter: select | Esc: cancel"
 		"ModeLabelDownloader" = "IPA Downloader"
 		"ModeLabelInstaller" = "IPA Installer"
+		"PressEnterToContinue" = "Press Enter to continue..."
 	}
 }
 
@@ -944,8 +946,18 @@ function IPA-Download {
 	)
 	if (!(Test-NumericInput -InputValue $AppId)) { return }
 	Separator
-	& "$ipatoolFilePath" download -i $AppId --purchase
-	Move-IPA-Files -AppId $AppId -AppName $AppName
+	try {
+		$dlOutput = & "$ipatoolFilePath" download -i $AppId --purchase 2>&1 | Out-String
+		if ($dlOutput -match "Error:" -or $dlOutput -match "error") {
+			Write-Host $dlOutput -ForegroundColor DarkRed
+			Read-Host (Get-Lang 'PressEnterToContinue')
+			return
+		}
+		Move-IPA-Files -AppId $AppId -AppName $AppName
+	} catch {
+		Write-Host "Error: $($_.Exception.Message)" -ForegroundColor DarkRed
+		Read-Host (Get-Lang 'PressEnterToContinue')
+	}
 }
 
 # Функция загрузки приложений с выбором версии:
@@ -1033,8 +1045,18 @@ function Invoke-AppAction {
 	switch ($Action) {
 		"Purchase" {
 			Separator
-			& "$ipatoolFilePath" purchase -i $AppId
-			Save-App-To-List -AppId $AppId -AppNameOnly $AppName -Type "Purchased"
+			try {
+				$purchaseOutput = & "$ipatoolFilePath" purchase -i $AppId 2>&1 | Out-String
+				if ($purchaseOutput -match "Error:" -or $purchaseOutput -match "error") {
+					Write-Host $purchaseOutput -ForegroundColor DarkRed
+					Read-Host (Get-Lang 'PressEnterToContinue')
+					return
+				}
+				Save-App-To-List -AppId $AppId -AppNameOnly $AppName -Type "Purchased"
+			} catch {
+				Write-Host "Error: $($_.Exception.Message)" -ForegroundColor DarkRed
+				Read-Host (Get-Lang 'PressEnterToContinue')
+			}
 		}
 		"Download" {
 			IPA-Download -AppId $AppId -AppName $AppName
