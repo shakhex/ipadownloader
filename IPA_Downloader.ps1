@@ -2102,6 +2102,7 @@ function Invoke-DownloaderMode {
 				Show-Error "ErrorInvalidInput"
 			}
 		}
+		Read-Host (Get-Lang 'PressEnterToContinue')
 	}
 }
 
