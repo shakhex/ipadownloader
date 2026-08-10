@@ -1,6 +1,8 @@
 # IPA Downloader (shakhex edit)
 
-Инструмент для загрузки и установки IPA-файлов из App Store через Apple ID. Поддерживает **Windows** и **macOS**.
+Инструмент для загрузки и установки IPA-файлов из App Store через Apple ID. **Windows only**.
+
+> Версия для macOS находится в разработке.
 
 ## Возможности
 
@@ -15,54 +17,20 @@
 
 ## Быстрый старт
 
-### Windows
-
 1. Скачайте или клонируйте репозиторий
 2. Запустите `Start_IPA_Downloader.bat`
 
 Всё необходимое уже включено в комплект.
 
-### macOS
-
-1. Скачайте или клонируйте репозиторий
-2. Откройте терминал в папке проекта:
-   ```bash
-   chmod +x Start_IPA_Downloader.command
-   ./Start_IPA_Downloader.command
-   ```
-   Или напрямую:
-   ```bash
-   chmod +x IPA_Downloader.sh
-   zsh IPA_Downloader.sh
-   ```
-
-**Зависимости** устанавливаются автоматически при первом запуске:
-- [Homebrew](https://brew.sh) — менеджер пакетов
-- `python3` — парсинг JSON и метаданных IPA
-- `curl` — HTTP-запросы (предустановлен на macOS)
-- [ipatool](https://github.com/majd/ipatool) — загрузка IPA
-- [ideviceinstaller](https://github.com/libimobiledevice/ideviceinstaller) — установка IPA на устройства
-
-Для ручной установки зависимостей:
-```bash
-brew install python3 ipatool libimobiledevice
-```
-
 ## Структура проекта
 
 ```
 IPA_Downloader/
-├── IPA_Downloader.ps1            # Windows (PowerShell)
-├── Start_IPA_Downloader.bat      # Запуск на Windows
-├── IPA_Downloader.sh             # macOS (zsh, нативный)
-├── Start_IPA_Downloader.command  # Запуск на macOS
+├── IPA_Downloader.ps1            # Основной скрипт (PowerShell)
+├── Start_IPA_Downloader.bat      # Запуск
 ├── MainApp/                      # Бинарные файлы
 │   ├── windows_amd64_v2/         #   ipatool.exe, ideviceinstaller.exe
-│   ├── windows_amd64_v3/         #   ipatool.exe, ideviceinstaller.exe, anisette.exe
-│   ├── macOS_amd64_v2/           #   ipatool (Intel)
-│   ├── macOS_amd64_v3/           #   ipatool (Intel)
-│   ├── macOS_arm64_v2/           #   ipatool (Apple Silicon)
-│   └── macOS_arm64_v3/           #   ipatool (Apple Silicon)
+│   └── windows_amd64_v3/         #   ipatool.exe, ideviceinstaller.exe, anisette.exe
 ├── Lists/                        # Списки приложений
 │   ├── Apps_ID_List.txt          #   Основной список (обновляется с GitHub)
 │   └── Banks_ID_List.txt         #   Список банковских приложений
@@ -74,23 +42,22 @@ IPA_Downloader/
 
 ## Использование
 
-### Режим IPA_Downloader
+### Режим Загрузчик IPA
 
 | Пункт | Описание |
 |-------|----------|
-| 1-3 | Поиск приложения → покупка / загрузка / загрузка с выбором версии |
-| 4-6 | Ввод App ID → покупка / загрузка / загрузка с выбором версии |
-| 7-9 | Выбор из списка → покупка / загрузка / загрузка с выбором версии |
-| 10 | Проверка минимальной iOS для IPA в папке Apps |
-| 11 | Установка IPA из папки Apps на устройство |
-| 12-14 | Пакетная загрузка/покупка из полного списка |
-| 15-17 | Пакетная загрузка/покупка банковских приложений |
-| 18 | Очистка данных |
-| 19 | Выход из Apple ID + сброс настроек |
-| 20 | Поддержка проекта |
-| 21 | Смена языка |
+| Поиск приложения | Поиск по названию → загрузка / загрузка с версией / покупка |
+| Поиск по ID | Ввод App ID → загрузка / загрузка с версией / покупка |
+| Список приложений | Выбор из списка (GitHub / загруженные / не загруженные) |
+| Банковские приложения | Пакетная загрузка / покупка банковских приложений |
+| Проверка iOS | Проверка минимальной версии iOS для IPA в папке Apps |
+| Установка | Установка IPA из папки Apps на устройство |
+| Очистка данных | Очистка списков покупок / загрузок / приложений |
+| Выход | Выход из Apple ID + сброс настроек |
+| Поддержка | Ссылка на поддержку проекта |
+| Язык | Смена языка (RU/EN) |
 
-### Режим IPA_Installer
+### Режим Установщик IPA
 
 Упрощённый режим для проверки iOS-версий и установки IPA на устройства.
 
