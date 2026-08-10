@@ -997,9 +997,15 @@ function IPA-Download {
 	if (!(Test-NumericInput -InputValue $AppId)) { return }
 	Separator
 	try {
-		$dlOutput = & "$ipatoolFilePath" download -i $AppId --purchase 2>&1 | Out-String
-		if ($LASTEXITCODE -ne 0 -or $dlOutput -match "Error:" -or $dlOutput -match "error" -or $dlOutput -match "WARNING:") {
-			Show-IpaError -Output $dlOutput
+		$stdout = [System.IO.Path]::GetTempFileName()
+		$stderr = [System.IO.Path]::GetTempFileName()
+		$proc = Start-Process -FilePath "$ipatoolFilePath" -ArgumentList "download", "-i", $AppId, "--purchase" -NoNewWindow -Wait -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+		$outText = (Get-Content $stdout -Raw -ErrorAction SilentlyContinue).Trim()
+		$errText = (Get-Content $stderr -Raw -ErrorAction SilentlyContinue).Trim()
+		Remove-Item $stdout, $stderr -Force -ErrorAction SilentlyContinue
+
+		if ($proc.ExitCode -ne 0 -or $errText) {
+			Show-IpaError -Output "$outText`n$errText"
 			Read-Host (Get-Lang 'PressEnterToContinue')
 			return
 		}
@@ -1069,9 +1075,15 @@ function IPA-Download-With-Version {
 		Separator
 		$FinalId = $SelectedObject.ID
 		try {
-			$dlOutput = & "$ipatoolFilePath" download -i $AppId --external-version-id $FinalId 2>&1 | Out-String
-			if ($LASTEXITCODE -ne 0 -or $dlOutput -match "Error:" -or $dlOutput -match "error" -or $dlOutput -match "WARNING:") {
-				Show-IpaError -Output $dlOutput
+			$stdout = [System.IO.Path]::GetTempFileName()
+			$stderr = [System.IO.Path]::GetTempFileName()
+			$proc = Start-Process -FilePath "$ipatoolFilePath" -ArgumentList "download", "-i", $AppId, "--external-version-id", $FinalId -NoNewWindow -Wait -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+			$outText = (Get-Content $stdout -Raw -ErrorAction SilentlyContinue).Trim()
+			$errText = (Get-Content $stderr -Raw -ErrorAction SilentlyContinue).Trim()
+			Remove-Item $stdout, $stderr -Force -ErrorAction SilentlyContinue
+
+			if ($proc.ExitCode -ne 0 -or $errText) {
+				Show-IpaError -Output "$outText`n$errText"
 				Write-Host "Пропуск версии $($SelectedObject.Version)..." -ForegroundColor DarkYellow
 				continue
 			}
@@ -1097,9 +1109,15 @@ function Invoke-AppAction {
 		"Purchase" {
 			Separator
 			try {
-				$purchaseOutput = & "$ipatoolFilePath" purchase -i $AppId 2>&1 | Out-String
-				if ($LASTEXITCODE -ne 0 -or $purchaseOutput -match "Error:" -or $purchaseOutput -match "error") {
-					Show-IpaError -Output $purchaseOutput
+				$stdout = [System.IO.Path]::GetTempFileName()
+				$stderr = [System.IO.Path]::GetTempFileName()
+				$proc = Start-Process -FilePath "$ipatoolFilePath" -ArgumentList "purchase", "-i", $AppId -NoNewWindow -Wait -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+				$outText = (Get-Content $stdout -Raw -ErrorAction SilentlyContinue).Trim()
+				$errText = (Get-Content $stderr -Raw -ErrorAction SilentlyContinue).Trim()
+				Remove-Item $stdout, $stderr -Force -ErrorAction SilentlyContinue
+
+				if ($proc.ExitCode -ne 0 -or $errText) {
+					Show-IpaError -Output "$outText`n$errText"
 					Read-Host (Get-Lang 'PressEnterToContinue')
 					return
 				}
