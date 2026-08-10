@@ -1882,14 +1882,15 @@ function Invoke-DownloaderMode {
 			(Get-Lang 'Menu10')
 		)
 		$SwitchValue = Show-Interactive-Menu -Title (Get-Lang 'MenuTitle') -Options $MainMenuOptions
+		$NeedPause = $true
 		switch ($SwitchValue) {
 
 			# 1. Поиск приложения:
 			"1" {
 				$Action = Show-Action-Submenu
-				if ($null -ne $Action) {
+				if ($null -eq $Action) { $NeedPause = $false } else {
 					$AppsToProcess = Search-Apps-Menu
-					if ($null -ne $AppsToProcess) {
+					if ($null -eq $AppsToProcess) { $NeedPause = $false } else {
 						foreach ($App in $AppsToProcess) {
 							Invoke-AppAction -AppId $App.id -AppName $App.name -DisplayName $App.name -Action $Action
 						}
@@ -1900,9 +1901,9 @@ function Invoke-DownloaderMode {
 			# 2. Поиск по ID:
 			"2" {
 				$Action = Show-Action-Submenu
-				if ($null -ne $Action) {
+				if ($null -eq $Action) { $NeedPause = $false } else {
 					$AppIds = Get-Multiple-AppIds -PromptKey 'AskIdSearch'
-					if ($null -ne $AppIds) {
+					if ($null -eq $AppIds) { $NeedPause = $false } else {
 						foreach ($Id in $AppIds) {
 							$AppNames = Resolve-AppDisplayName -AppId $Id
 							Invoke-AppAction -AppId $Id -AppName $AppNames.Final -DisplayName $AppNames.Display -Action $Action
@@ -1914,10 +1915,10 @@ function Invoke-DownloaderMode {
 			# 3. Список приложений:
 			"3" {
 				$Action = Show-Action-Submenu
-				if ($null -ne $Action) {
+				if ($null -eq $Action) { $NeedPause = $false } else {
 					Separator
 					$SelectedApps = Get-Apps-From-List -ListMode "Download"
-					if ($null -ne $SelectedApps) {
+					if ($null -eq $SelectedApps) { $NeedPause = $false } else {
 						foreach ($App in $SelectedApps) {
 							Invoke-AppAction -AppId $App.Id -AppName $App.Name -DisplayName $App.Name -Action $Action
 						}
@@ -1928,7 +1929,7 @@ function Invoke-DownloaderMode {
 			# 4. Банковские приложения:
 			"4" {
 				$Action = Show-Action-Submenu
-				if ($null -ne $Action) {
+				if ($null -eq $Action) { $NeedPause = $false } else {
 					Download-Banks -Action $Action
 				}
 			}
@@ -2099,10 +2100,10 @@ function Invoke-DownloaderMode {
 			
 			# Неверный ввод:
 			default {
-				Show-Error "ErrorInvalidInput"
+				$NeedPause = $false
 			}
 		}
-		Read-Host (Get-Lang 'PressEnterToContinue')
+		if ($NeedPause) { Read-Host (Get-Lang 'PressEnterToContinue') }
 	}
 }
 
