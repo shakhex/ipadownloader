@@ -986,7 +986,7 @@ function IPA-Download {
 	Separator
 	try {
 		$dlOutput = & "$ipatoolFilePath" download -i $AppId --purchase 2>&1 | Out-String
-		if ($dlOutput -match "Error:" -or $dlOutput -match "error" -or $dlOutput -match "WARNING:") {
+		if ($LASTEXITCODE -ne 0 -or $dlOutput -match "Error:" -or $dlOutput -match "error" -or $dlOutput -match "WARNING:") {
 			Show-IpaError -Output $dlOutput
 			Read-Host (Get-Lang 'PressEnterToContinue')
 			return
@@ -1009,7 +1009,7 @@ function IPA-Download-With-Version {
 	Separator
 	$RawOutput = & "$ipatoolFilePath" list-versions -i $AppId 2>&1
 
-	if ($RawOutput -match "Error:" -or $RawOutput -match "error") {
+	if ($LASTEXITCODE -ne 0 -or $RawOutput -match "Error:" -or $RawOutput -match "error") {
 		Show-IpaError -Output $RawOutput
 		Read-Host (Get-Lang 'PressEnterToContinue')
 		return
@@ -1058,7 +1058,7 @@ function IPA-Download-With-Version {
 		$FinalId = $SelectedObject.ID
 		try {
 			$dlOutput = & "$ipatoolFilePath" download -i $AppId --external-version-id $FinalId 2>&1 | Out-String
-			if ($dlOutput -match "Error:" -or $dlOutput -match "error" -or $dlOutput -match "WARNING:") {
+			if ($LASTEXITCODE -ne 0 -or $dlOutput -match "Error:" -or $dlOutput -match "error" -or $dlOutput -match "WARNING:") {
 				Show-IpaError -Output $dlOutput
 				Write-Host "Пропуск версии $($SelectedObject.Version)..." -ForegroundColor DarkYellow
 				continue
@@ -1086,7 +1086,7 @@ function Invoke-AppAction {
 			Separator
 			try {
 				$purchaseOutput = & "$ipatoolFilePath" purchase -i $AppId 2>&1 | Out-String
-				if ($purchaseOutput -match "Error:" -or $purchaseOutput -match "error") {
+				if ($LASTEXITCODE -ne 0 -or $purchaseOutput -match "Error:" -or $purchaseOutput -match "error") {
 					Show-IpaError -Output $purchaseOutput
 					Read-Host (Get-Lang 'PressEnterToContinue')
 					return
