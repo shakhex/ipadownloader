@@ -1,4 +1,15 @@
-﻿# Переключение рабочей директории в папку со скриптом:
+﻿# Глобальный перехват всех необработанных ошибок:
+trap {
+	Write-Host ""
+	Write-Host "Ошибка: $($_.Exception.Message)" -ForegroundColor DarkRed
+	if ($_.Exception.InnerException) {
+		Write-Host "Подробности: $($_.Exception.InnerException.Message)" -ForegroundColor DarkYellow
+	}
+	Read-Host "Нажмите Enter для продолжения..."
+	continue
+}
+
+# Переключение рабочей директории в папку со скриптом:
 Set-Location -Path $PSScriptRoot
 
 # Версия скрипта:
