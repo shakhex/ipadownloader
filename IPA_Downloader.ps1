@@ -1463,13 +1463,15 @@ function Check-Update {
 		$LastCommitFile = Join-Path -Path $MainAppFolderPath -ChildPath ".last_commit"
 		$LocalSha = ""
 		if (Test-Path $LastCommitFile) {
-			$LocalSha = (Get-Content $LastCommitFile -Raw -ErrorAction SilentlyContinue).Trim()
+			$RawContent = Get-Content $LastCommitFile -Raw -ErrorAction SilentlyContinue
+			if ($null -ne $RawContent) { $LocalSha = $RawContent.Trim() }
 		}
 		# Fallback на git, если .last_commit отсутствует или пуст:
 		if ([string]::IsNullOrWhiteSpace($LocalSha)) {
 			$GitExe = (Get-Command git -ErrorAction SilentlyContinue).Source
 			if ($GitExe -and (Test-Path (Join-Path $PSScriptRoot ".git"))) {
-				$LocalSha = (& $GitExe -C $PSScriptRoot rev-parse HEAD 2>$null).Trim()
+				$GitOutput = & $GitExe -C $PSScriptRoot rev-parse HEAD 2>$null
+				if ($null -ne $GitOutput) { $LocalSha = $GitOutput.Trim() }
 				# Синхронизируем .last_commit с git:
 				if (-not [string]::IsNullOrWhiteSpace($LocalSha)) {
 					Set-Content -Path $LastCommitFile -Value $LocalSha -Force
