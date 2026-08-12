@@ -1556,6 +1556,8 @@ function Check-Update {
 
 		# Перезапуск скрипта:
 		$SelfPath = Join-Path -Path $PSScriptRoot -ChildPath "IPA_Downloader.ps1"
+		# Флаг для bat-файла: пропустить pause после обновления:
+		Set-Content -Path (Join-Path $PSScriptRoot ".updating") -Value "1" -Force
 		$pwshPath = (Get-Command pwsh -ErrorAction SilentlyContinue).Source
 		if (-not $pwshPath) { $pwshPath = (Get-Command powershell -ErrorAction SilentlyContinue).Source }
 		if ($pwshPath) {
