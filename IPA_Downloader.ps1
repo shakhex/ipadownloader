@@ -1,4 +1,4 @@
-# Глобальный перехват всех необработанных ошибок:
+﻿# Глобальный перехват всех необработанных ошибок:
 trap {
 	Write-Host ""
 	Write-Host "Ошибка: $($_.Exception.Message)" -ForegroundColor DarkRed
