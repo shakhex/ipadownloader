@@ -1,4 +1,4 @@
-﻿# Глобальный перехват всех необработанных ошибок:
+# Глобальный перехват всех необработанных ошибок:
 trap {
 	Write-Host ""
 	Write-Host "Ошибка: $($_.Exception.Message)" -ForegroundColor DarkRed
@@ -1479,19 +1479,22 @@ function Check-Update {
 
 		$RemoteSha = $CommitData.sha
 
-		# Читаем сохранённый хеш (сначала пробуем git, затем файл):
+		# Читаем сохранённый хеш (сначала .last_commit, затем git как fallback):
 		$LastCommitFile = Join-Path -Path $MainAppFolderPath -ChildPath ".last_commit"
 		$LocalSha = ""
-		$GitExe = (Get-Command git -ErrorAction SilentlyContinue).Source
-		if ($GitExe -and (Test-Path (Join-Path $PSScriptRoot ".git"))) {
-			$LocalSha = (& $GitExe -C $PSScriptRoot rev-parse HEAD 2>$null).Trim()
-			# Синхронизируем .last_commit с git:
-			if (-not [string]::IsNullOrWhiteSpace($LocalSha)) {
-				Set-Content -Path $LastCommitFile -Value $LocalSha -Force
-			}
-		}
-		if ([string]::IsNullOrWhiteSpace($LocalSha) -and (Test-Path $LastCommitFile)) {
+		if (Test-Path $LastCommitFile) {
 			$LocalSha = (Get-Content $LastCommitFile -Raw -ErrorAction SilentlyContinue).Trim()
+		}
+		# Fallback на git, если .last_commit отсутствует или пуст:
+		if ([string]::IsNullOrWhiteSpace($LocalSha)) {
+			$GitExe = (Get-Command git -ErrorAction SilentlyContinue).Source
+			if ($GitExe -and (Test-Path (Join-Path $PSScriptRoot ".git"))) {
+				$LocalSha = (& $GitExe -C $PSScriptRoot rev-parse HEAD 2>$null).Trim()
+				# Синхронизируем .last_commit с git:
+				if (-not [string]::IsNullOrWhiteSpace($LocalSha)) {
+					Set-Content -Path $LastCommitFile -Value $LocalSha -Force
+				}
+			}
 		}
 
 		# Если хеши совпадают — обновление не нужно:
