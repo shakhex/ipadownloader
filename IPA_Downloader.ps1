@@ -997,15 +997,8 @@ function IPA-Download {
 	if (!(Test-NumericInput -InputValue $AppId)) { return }
 	Separator
 	try {
-		$stdout = [System.IO.Path]::GetTempFileName()
-		$stderr = [System.IO.Path]::GetTempFileName()
-		$proc = Start-Process -FilePath "$ipatoolFilePath" -ArgumentList "download", "-i", $AppId, "--purchase" -NoNewWindow -Wait -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
-		$outText = (Get-Content $stdout -Raw -ErrorAction SilentlyContinue).Trim()
-		$errText = (Get-Content $stderr -Raw -ErrorAction SilentlyContinue).Trim()
-		Remove-Item $stdout, $stderr -Force -ErrorAction SilentlyContinue
-
-		if ($proc.ExitCode -ne 0 -or $errText) {
-			Show-IpaError -Output "$outText`n$errText"
+		& "$ipatoolFilePath" download -i $AppId --purchase
+		if ($LASTEXITCODE -ne 0) {
 			Read-Host (Get-Lang 'PressEnterToContinue')
 			return
 		}
@@ -1075,15 +1068,9 @@ function IPA-Download-With-Version {
 		Separator
 		$FinalId = $SelectedObject.ID
 		try {
-			$stdout = [System.IO.Path]::GetTempFileName()
-			$stderr = [System.IO.Path]::GetTempFileName()
-			$proc = Start-Process -FilePath "$ipatoolFilePath" -ArgumentList "download", "-i", $AppId, "--external-version-id", $FinalId -NoNewWindow -Wait -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
-			$outText = (Get-Content $stdout -Raw -ErrorAction SilentlyContinue).Trim()
-			$errText = (Get-Content $stderr -Raw -ErrorAction SilentlyContinue).Trim()
-			Remove-Item $stdout, $stderr -Force -ErrorAction SilentlyContinue
-
-			if ($proc.ExitCode -ne 0 -or $errText) {
-				Show-IpaError -Output "$outText`n$errText"
+			Separator
+			& "$ipatoolFilePath" download -i $AppId --external-version-id $FinalId
+			if ($LASTEXITCODE -ne 0) {
 				Write-Host "Пропуск версии $($SelectedObject.Version)..." -ForegroundColor DarkYellow
 				continue
 			}
@@ -1109,15 +1096,8 @@ function Invoke-AppAction {
 		"Purchase" {
 			Separator
 			try {
-				$stdout = [System.IO.Path]::GetTempFileName()
-				$stderr = [System.IO.Path]::GetTempFileName()
-				$proc = Start-Process -FilePath "$ipatoolFilePath" -ArgumentList "purchase", "-i", $AppId -NoNewWindow -Wait -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
-				$outText = (Get-Content $stdout -Raw -ErrorAction SilentlyContinue).Trim()
-				$errText = (Get-Content $stderr -Raw -ErrorAction SilentlyContinue).Trim()
-				Remove-Item $stdout, $stderr -Force -ErrorAction SilentlyContinue
-
-				if ($proc.ExitCode -ne 0 -or $errText) {
-					Show-IpaError -Output "$outText`n$errText"
+				& "$ipatoolFilePath" purchase -i $AppId
+				if ($LASTEXITCODE -ne 0) {
 					Read-Host (Get-Lang 'PressEnterToContinue')
 					return
 				}
